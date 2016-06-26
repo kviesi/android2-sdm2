@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Mensageiro</string>
+
+    <string name="adduser_fail">Falha ao adicionar contato.</string>
+    <string name="adduser_invalid">"Contato inválido. Preencha os dados corretamente!"</string>
+
+    <string name="listuser_fail">"Falha ao listar contatos."</string>
+</resources>
