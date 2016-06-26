@@ -4,15 +4,12 @@ import android.app.ListActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.Toast;
 
-import com.android.volley.Request;
 import com.android.volley.VolleyError;
 
 import org.json.JSONArray;
@@ -20,12 +17,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
+import br.edu.ifspsaocarlos.sdm.mensageiro.constant.Constants;
+import br.edu.ifspsaocarlos.sdm.mensageiro.helper.ContactArrayAdapter;
 import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
 import br.edu.ifspsaocarlos.sdm.mensageiro.model.Contact;
 
-public class ContactsActivity extends ListActivity implements AdapterView.OnItemClickListener {
+public class ContactsActivity extends ListActivity {
 
     private static final String WS_CONTACT_URL = "http://www.nobile.pro.br/sdm/mensageiro/contato";
 
@@ -59,14 +57,19 @@ public class ContactsActivity extends ListActivity implements AdapterView.OnItem
 
                 JSONArray contactsJSONArray = jsonObject.getJSONArray("contatos");
 
-                ArrayList<String> contactList = new ArrayList<String>();
+                ArrayList<Contact> contactList = new ArrayList<Contact>();
 
                 for(int i = 0 ; i < contactsJSONArray.length() ; i++) {
 
                     try {
                         JSONObject contactJSON = contactsJSONArray.getJSONObject(i);
 
-                        contactList.add(contactJSON.getString("nome_completo") + " - " + contactJSON.getString("apelido"));
+                        Contact contact = new Contact();
+                        contact.setNickName(contactJSON.getString("apelido"));
+                        contact.setName(contactJSON.getString("nome_completo"));
+                        contact.setId(contactJSON.getLong("id"));
+
+                        contactList.add(contact);
 
                     } catch (JSONException e) {
                         /* Skip invalid item */
@@ -75,7 +78,7 @@ public class ContactsActivity extends ListActivity implements AdapterView.OnItem
                 }
 
                 //show contacts in list view
-                setListAdapter(new ArrayAdapter<String>(context,android.R.layout.simple_list_item_1, contactList));
+                setListAdapter(new ContactArrayAdapter(context, contactList));
             }
 
             @Override
@@ -92,11 +95,12 @@ public class ContactsActivity extends ListActivity implements AdapterView.OnItem
 
     }
 
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        Intent messages = new Intent(MessagesActivity.class.getName());
-        messages.putExtra("contactID", 1L);
+    protected void onListItemClick(ListView l, View v, int position, long id) {
+        Contact contact = (Contact) l.getItemAtPosition(position);
 
+        Intent messages = new Intent(this, MessagesActivity.class);
+        messages.putExtra(Constants.CONTACT_ID, contact.getId());
         startActivity(messages);
     }
+
 }

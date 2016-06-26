@@ -5,4 +5,9 @@
     <string name="adduser_invalid">"Contato inválido. Preencha os dados corretamente!"</string>
 
     <string name="listuser_fail">"Falha ao listar contatos."</string>
+
+    <string name="message_fail_list">Falha ao carregar mensagens.</string>
+    <string name="message_fail_send">Falha ao enviar mensagem.</string>
+    <string name="message_invalid">Mensagem inválida para envio.</string>
+
 </resources>
