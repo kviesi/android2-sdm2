@@ -21,6 +21,7 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import br.edu.ifspsaocarlos.sdm.mensageiro.constant.Constants;
 import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
 import br.edu.ifspsaocarlos.sdm.mensageiro.model.Contact;
 
@@ -41,7 +42,7 @@ public class AddContactActivity extends Activity {
         setContentView(R.layout.activity_add_contact);
 
         volleyHelper = new VolleyHelper(this);
-        //isUserRegister = savedInstanceState.getBoolean("userRegister");
+        isUserRegister = getIntent().getExtras().getBoolean(Constants.OP_USER_REGISTER);
     }
 
     public void onClickSave(View v) {
@@ -86,8 +87,8 @@ public class AddContactActivity extends Activity {
                     Long contactId  = jsonObject.getLong("id");
 
                     if(contactId != null && contactId > 0) {
-                        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-                        preferences.edit().putLong("ownerId", contactId).commit();
+                        SharedPreferences preferences = getSharedPreferences(Constants.LOGGED_USER, MODE_PRIVATE);
+                        preferences.edit().putLong(Constants.CONTACT_OWNER_ID, contactId).commit();
                     }
 
                 }

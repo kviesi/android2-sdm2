@@ -6,6 +6,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -18,17 +19,27 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
+import br.edu.ifspsaocarlos.sdm.mensageiro.constant.Constants;
 import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
 import br.edu.ifspsaocarlos.sdm.mensageiro.model.Message;
 
 public class MessagesActivity extends Activity {
 
+    private ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(1);
+
     private static final String MESSAGE_WS_BASEURL = "http://www.nobile.pro.br/sdm/mensageiro/mensagem";
+
+    private ReentrantLock lock = new ReentrantLock();
 
     private VolleyHelper volleyHelper;
     private ListView messageListView;
     private EditText messageEditText;
+    private Button btnSend;
 
     private Long contactID; // selected contact id
     private Long ownerID;
@@ -41,56 +52,81 @@ public class MessagesActivity extends Activity {
         volleyHelper = new VolleyHelper(this);
         messageListView = (ListView) findViewById(R.id.lvMessages);
         messageEditText = (EditText) findViewById(R.id.etMessage);
+        btnSend = (Button) findViewById(R.id.btnEnviar);
 
-        contactID = 3L;
-        ownerID = 2L;
+        contactID = getIntent().getExtras().getLong(Constants.CONTACT_ID);
+        ownerID = getSharedPreferences(Constants.LOGGED_USER, MODE_PRIVATE).getLong(Constants.CONTACT_OWNER_ID, 0);
 
-        loadAllMessages();
+        threadPool.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        loadAllMessages();
+                    }
+                });
+            }
+        },0, 5, TimeUnit.SECONDS);
+    }
+
+    @Override
+    protected void onDestroy() {
+        threadPool.shutdownNow();
+
+        super.onDestroy();
     }
 
     //load all messages async
     private void loadAllMessages() {
-        final AsyncTask<Void, Void, Void> loadMessagesStartup = new AsyncTask<Void, Void, Void>() {
+        try {
+            lock.lock();
 
-            @Override
-            protected Void doInBackground(Void... params) {
+            final AsyncTask<Void, Void, Void> loadMessagesStartup = new AsyncTask<Void, Void, Void>() {
 
-                volleyHelper.get(MESSAGE_WS_BASEURL + "/0/" + ownerID + "/" + contactID, new VolleyHelper.VolleyCallback() {
+                @Override
+                protected Void doInBackground(Void... params) {
 
-                    @Override
-                    public void onSuccess(JSONObject jsonObject, Context context) throws Exception {
+                    volleyHelper.get(MESSAGE_WS_BASEURL + "/0/" + ownerID + "/" + contactID, new VolleyHelper.VolleyCallback() {
 
-                        JSONArray messagesJson = jsonObject.getJSONArray("mensagens");
+                        @Override
+                        public void onSuccess(JSONObject jsonObject, Context context) throws Exception {
 
-                        ArrayList<String> messageList = new ArrayList<String>(messagesJson.length());
+                            JSONArray messagesJson = jsonObject.getJSONArray("mensagens");
 
-                        for(int i = 0 ; i < messagesJson.length() ; i++) {
+                            ArrayList<String> messageList = new ArrayList<String>(messagesJson.length());
 
-                            JSONObject messageJson = messagesJson.getJSONObject(i);
+                            for (int i = 0; i < messagesJson.length(); i++) {
 
-                            messageList.add("[" + messageJson.getString("assunto") + "] " + messageJson.getString("corpo"));
+                                JSONObject messageJson = messagesJson.getJSONObject(i);
+
+                                messageList.add("[" + messageJson.getString("assunto") + "] " + messageJson.getString("corpo"));
+                            }
+
+                            messageListView.setAdapter(new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, messageList));
+                            messageListView.setSelection(messageList.size()); //focus on last item
                         }
 
-                        messageListView.setAdapter(new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, messageList));
-                        messageListView.setSelection(messageList.size()); //focus on last item
-                    }
+                        @Override
+                        public void onError(VolleyError volleyError, Context context) {
+                            Toast.makeText(context, R.string.message_fail_list, Toast.LENGTH_SHORT).show();
+                        }
 
-                    @Override
-                    public void onError(VolleyError volleyError, Context context) {
-                        Toast.makeText(context, R.string.message_fail_list, Toast.LENGTH_SHORT).show();
-                    }
+                        @Override
+                        public void onFatalError(Exception e, Context context) {
+                            Toast.makeText(context, R.string.message_fail_list, Toast.LENGTH_SHORT).show();
+                        }
+                    });
 
-                    @Override
-                    public void onFatalError(Exception e, Context context) {
-                        Toast.makeText(context, R.string.message_fail_list, Toast.LENGTH_SHORT).show();
-                    }
-                });
+                    return null;
+                }
+            };
 
-                return null;
-            }
-        };
+            loadMessagesStartup.execute();
 
-        loadMessagesStartup.execute();
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void onClickSendMessage(View v) {
@@ -107,26 +143,46 @@ public class MessagesActivity extends Activity {
 
         } else {
 
-            volleyHelper.post(MESSAGE_WS_BASEURL, message, new VolleyHelper.VolleyCallback() {
+            AsyncTask<Message, Void, Void> asyncTask = new AsyncTask<Message, Void, Void>() {
+
                 @Override
-                public void onSuccess(JSONObject jsonObject, Context context) throws Exception {
-                    loadAllMessages();
-                    messageEditText.setText(""); // clean field
+                protected void onPreExecute() {
+                    btnSend.setEnabled(false);
                 }
 
                 @Override
-                public void onError(VolleyError volleyError, Context context) {
-                    Toast.makeText(context, R.string.message_fail_send, Toast.LENGTH_SHORT).show();
+                protected void onPostExecute(Void aVoid) {
+                    btnSend.setEnabled(true);
                 }
 
                 @Override
-                public void onFatalError(Exception e, Context context) {
-                    Toast.makeText(context, R.string.message_fail_send, Toast.LENGTH_SHORT).show();
-                }
-            });
+                protected Void doInBackground(Message... params) {
 
+                    volleyHelper.post(MESSAGE_WS_BASEURL, params[0], new VolleyHelper.VolleyCallback() {
+
+                        @Override
+                        public void onSuccess(JSONObject jsonObject, Context context) throws Exception {
+                            loadAllMessages();
+                            messageEditText.setText(""); // clean field
+                        }
+
+                        @Override
+                        public void onError(VolleyError volleyError, Context context) {
+                            Toast.makeText(context, R.string.message_fail_send, Toast.LENGTH_SHORT).show();
+                        }
+
+                        @Override
+                        public void onFatalError(Exception e, Context context) {
+                            Toast.makeText(context, R.string.message_fail_send, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+                    return null;
+                }
+            };
+
+            asyncTask.execute(message);
         }
-
     }
 
     private String nowDate() {

@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -34,13 +33,21 @@ public class ContactsActivity extends ListActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contacts);
 
+        //check if user is registred.
+        Long userID = getSharedPreferences(Constants.LOGGED_USER, MODE_PRIVATE).getLong(Constants.CONTACT_OWNER_ID, 0);
+        if(userID == null || userID == 0) {
+            Intent loginIntent = new Intent(this, AddContactActivity.class);
+            loginIntent.putExtra(Constants.OP_USER_REGISTER, true);
+            startActivity(loginIntent);
+        }
+
         volleyHelper = new VolleyHelper(this);
 
         final AsyncTask<Void, Void, Void> loadContactsTask = new AsyncTask<Void, Void, Void>() {
 
             protected Void doInBackground(Void... params) {
 
-                populateListAdapter();
+                loadAllContacts();
 
                 return null;
             }
@@ -49,7 +56,7 @@ public class ContactsActivity extends ListActivity {
         loadContactsTask.execute();
     }
 
-    public void populateListAdapter() {
+    public void loadAllContacts() {
 
         volleyHelper.get(WS_CONTACT_URL, new VolleyHelper.VolleyCallback() {
             @Override
@@ -99,7 +106,7 @@ public class ContactsActivity extends ListActivity {
         Contact contact = (Contact) l.getItemAtPosition(position);
 
         Intent messages = new Intent(this, MessagesActivity.class);
-        messages.putExtra(Constants.CONTACT_ID, contact.getId());
+        messages.putExtra(Constants.CONTACT_ID, contact.getId()); //send contact to conversation
         startActivity(messages);
     }
 
