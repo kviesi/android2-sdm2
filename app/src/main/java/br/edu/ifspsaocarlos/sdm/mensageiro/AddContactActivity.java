@@ -22,12 +22,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import br.edu.ifspsaocarlos.sdm.mensageiro.constant.Constants;
+import br.edu.ifspsaocarlos.sdm.mensageiro.constant.ConstantsWS;
 import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
 import br.edu.ifspsaocarlos.sdm.mensageiro.model.Contact;
 
 public class AddContactActivity extends Activity {
-
-    private static final String WS_CONTACT_URL = "http://www.nobile.pro.br/sdm/mensageiro/contato";
 
     private EditText nameEditText;
     private EditText nickNameEditText;
@@ -77,7 +76,7 @@ public class AddContactActivity extends Activity {
 
     public void addContact(Contact contact) {
 
-        volleyHelper.post(WS_CONTACT_URL, contact, new VolleyHelper.VolleyCallback() {
+        volleyHelper.post(ConstantsWS.WS_CONTACT_URL, contact, new VolleyHelper.VolleyCallback() {
 
             @Override
             public void onSuccess(JSONObject jsonObject, Context context) throws Exception {

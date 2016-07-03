@@ -14,6 +14,8 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Collection;
+
 /**
  * Created by kaiov on 26/06/2016.
  */
@@ -83,6 +85,38 @@ public class VolleyHelper {
                 });
 
         requestQueue.add(request);
+    }
+
+    public void getMany(Iterable<String> urls, final VolleyCallback volleyCallback) {
+
+        for(String url : urls) {
+            StringRequest request = new StringRequest(
+                    Request.Method.GET,
+                    url,
+                    new Response.Listener() {
+
+                        @Override
+                        public void onResponse(Object response) {
+                            try {
+                                if (response instanceof String) {
+                                    volleyCallback.onSuccess(new JSONObject(response.toString()), context);
+                                } else if (response instanceof JSONObject) {
+                                    volleyCallback.onSuccess((JSONObject) response, context);
+                                }
+                            } catch (Exception e) {
+                                volleyCallback.onFatalError(e, context);
+                            }
+                        }
+                    },
+                    new Response.ErrorListener() {
+
+                        public void onErrorResponse(VolleyError error) {
+                            volleyCallback.onError(error, context);
+                        }
+                    });
+
+            requestQueue.add(request);
+        }
     }
 
     public static interface VolleyCallback {

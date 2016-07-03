@@ -25,14 +25,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import br.edu.ifspsaocarlos.sdm.mensageiro.constant.Constants;
+import br.edu.ifspsaocarlos.sdm.mensageiro.constant.ConstantsWS;
 import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
 import br.edu.ifspsaocarlos.sdm.mensageiro.model.Message;
 
 public class MessagesActivity extends Activity {
 
     private ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(1);
-
-    private static final String MESSAGE_WS_BASEURL = "http://www.nobile.pro.br/sdm/mensageiro/mensagem";
 
     private ReentrantLock lock = new ReentrantLock();
 
@@ -87,7 +86,7 @@ public class MessagesActivity extends Activity {
                 @Override
                 protected Void doInBackground(Void... params) {
 
-                    volleyHelper.get(MESSAGE_WS_BASEURL + "/0/" + ownerID + "/" + contactID, new VolleyHelper.VolleyCallback() {
+                    volleyHelper.get(ConstantsWS.MESSAGE_WS_BASEURL + "/0/" + ownerID + "/" + contactID, new VolleyHelper.VolleyCallback() {
 
                         @Override
                         public void onSuccess(JSONObject jsonObject, Context context) throws Exception {
@@ -100,7 +99,13 @@ public class MessagesActivity extends Activity {
 
                                 JSONObject messageJson = messagesJson.getJSONObject(i);
 
-                                messageList.add("[" + messageJson.getString("assunto") + "] " + messageJson.getString("corpo"));
+                                String message = "";
+                                if (ownerID == messageJson.getLong("origem_id")) {
+                                    message += "[eu]";
+                                }
+                                message += " [" + messageJson.getString("assunto") + "] " + messageJson.getString("corpo");
+
+                                messageList.add(message);
                             }
 
                             messageListView.setAdapter(new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, messageList));
@@ -158,7 +163,7 @@ public class MessagesActivity extends Activity {
                 @Override
                 protected Void doInBackground(Message... params) {
 
-                    volleyHelper.post(MESSAGE_WS_BASEURL, params[0], new VolleyHelper.VolleyCallback() {
+                    volleyHelper.post(ConstantsWS.MESSAGE_WS_BASEURL, params[0], new VolleyHelper.VolleyCallback() {
 
                         @Override
                         public void onSuccess(JSONObject jsonObject, Context context) throws Exception {
