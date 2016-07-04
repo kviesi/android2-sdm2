@@ -26,4 +26,5 @@ dependencies {
 
     compile 'io.realm:realm-android:0.84.1'
     compile 'com.android.volley:volley:1.0.0'
+    compile 'com.squareup.okhttp3:okhttp:3.3.1'
 }

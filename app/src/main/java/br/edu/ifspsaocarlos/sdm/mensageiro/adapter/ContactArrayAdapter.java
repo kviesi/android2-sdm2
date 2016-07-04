@@ -1,4 +1,4 @@
-package br.edu.ifspsaocarlos.sdm.mensageiro.helper;
+package br.edu.ifspsaocarlos.sdm.mensageiro.adapter;
 
 import android.content.Context;
 import android.view.LayoutInflater;

@@ -3,17 +3,26 @@ package br.edu.ifspsaocarlos.sdm.mensageiro.model;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
-import io.realm.RealmObject;
-
 /**
  * Created by kaiov on 25/06/2016.
  */
-public class Contact implements VolleyHelper.JSONModel {
+public class Contact {
 
     private String name;
     private String nickName;
     private long id;
+
+    public static Contact of(JSONObject json) {
+        try {
+            Contact contact = new Contact();
+            contact.setNickName(json.getString("apelido"));
+            contact.setName(json.getString("nome_completo"));
+            contact.setId(json.getLong("id"));
+            return contact;
+        } catch (JSONException e) {
+            return null;
+        }
+    }
 
     public long getId() {
         return id;

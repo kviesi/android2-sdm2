@@ -1,23 +1,32 @@
 package br.edu.ifspsaocarlos.sdm.mensageiro.model;
 
+import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.util.Date;
-
-import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
-import io.realm.RealmObject;
-import io.realm.annotations.PrimaryKey;
 
 /**
  * Created by kaiov on 25/06/2016.
  */
-public class Message implements VolleyHelper.JSONModel {
+public class Message  {
 
     private long id;
     private String payload;
     private String subject;
     private long destID;
     private long origID;
+
+    public static Message of(JSONObject json) {
+        try {
+            Message message = new Message();
+            message.setId(json.getLong("id"));
+            message.setPayload(json.getString("corpo"));
+            message.setSubject(json.getString("assunto"));
+            message.setOrigID(json.getLong("origem_id"));
+            message.setDestID(json.getLong("destino_id"));
+            return message;
+        } catch (JSONException e) {
+            return null;
+        }
+    }
 
     public long getId() {
         return id;
@@ -64,7 +73,6 @@ public class Message implements VolleyHelper.JSONModel {
 
     }
 
-    @Override
     public JSONObject toJSON() {
         try {
             JSONObject jsonObject = new JSONObject();

@@ -1,12 +1,11 @@
 package br.edu.ifspsaocarlos.sdm.mensageiro;
 
 import android.app.Activity;
-import android.content.Context;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -23,7 +22,6 @@ import org.json.JSONObject;
 
 import br.edu.ifspsaocarlos.sdm.mensageiro.constant.Constants;
 import br.edu.ifspsaocarlos.sdm.mensageiro.constant.ConstantsWS;
-import br.edu.ifspsaocarlos.sdm.mensageiro.helper.VolleyHelper;
 import br.edu.ifspsaocarlos.sdm.mensageiro.model.Contact;
 
 public class AddContactActivity extends Activity {
@@ -31,7 +29,7 @@ public class AddContactActivity extends Activity {
     private EditText nameEditText;
     private EditText nickNameEditText;
 
-    private VolleyHelper volleyHelper;
+    private RequestQueue volley;
 
     private boolean isUserRegister;
 
@@ -40,7 +38,7 @@ public class AddContactActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_contact);
 
-        volleyHelper = new VolleyHelper(this);
+        volley = Volley.newRequestQueue(this);
         isUserRegister = getIntent().getExtras().getBoolean(Constants.OP_USER_REGISTER);
     }
 
@@ -54,59 +52,65 @@ public class AddContactActivity extends Activity {
         contact.setNickName(nickNameEditText.getText().toString());
 
         if(!contact.isValid()) {
-
             Toast.makeText(this, R.string.adduser_invalid, Toast.LENGTH_LONG).show();
-
         } else {
-
-            AsyncTask<Contact, Void, Void> asyncTask = new AsyncTask<Contact, Void, Void>() {
-                @Override
-                protected Void doInBackground(Contact... params) {
-
-                    addContact(params.length == 1 ? params[0] : null);
-
-                    return null;
-                }
-            };
-
-            asyncTask.execute(contact);
+            addContact(contact);
         }
-
     }
 
     public void addContact(Contact contact) {
 
-        volleyHelper.post(ConstantsWS.WS_CONTACT_URL, contact, new VolleyHelper.VolleyCallback() {
-
+        JsonObjectRequest contactAddRequest = new JsonObjectRequest(ConstantsWS.WS_CONTACT_URL, contact.toJSON(), new Response.Listener<JSONObject>() {
             @Override
-            public void onSuccess(JSONObject jsonObject, Context context) throws Exception {
+            public void onResponse(JSONObject response) {
+                try {
 
-                if(isUserRegister) {
+                    if (isUserRegister) {
 
-                    Long contactId  = jsonObject.getLong("id");
+                        Long contactId = response != null ? response.getLong("id") : null;
 
-                    if(contactId != null && contactId > 0) {
-                        SharedPreferences preferences = getSharedPreferences(Constants.LOGGED_USER, MODE_PRIVATE);
-                        preferences.edit().putLong(Constants.CONTACT_OWNER_ID, contactId).commit();
+                        if (contactId != null && contactId > 0) {
+                            SharedPreferences preferences = getSharedPreferences(Constants.LOGGED_USER, MODE_PRIVATE);
+                            preferences.edit().putLong(Constants.CONTACT_OWNER_ID, contactId).commit();
+                        }
+
                     }
 
+                    Intent contactsIntent = new Intent(ContactsActivity.class.getName());
+                    AddContactActivity.this.startActivity(contactsIntent);
+
+
+                } catch (JSONException e) {
+                    Log.e("add_contact_volley", "Falha ao parsear JSON resposta do adicionar contato", e);
+                    handleError();
                 }
-
-                Intent contactsIntent = new Intent(ContactsActivity.class.getName());
-                startActivity(contactsIntent);
             }
-
+        }, new Response.ErrorListener() {
             @Override
-            public void onError(VolleyError volleyError, Context context) {
-                Toast.makeText(context, R.string.adduser_fail, Toast.LENGTH_SHORT).show();
+            public void onErrorResponse(VolleyError error) {
+                handleError();
             }
-
-            @Override
-            public void onFatalError(Exception e, Context context) {
-                Toast.makeText(context, R.string.adduser_fail, Toast.LENGTH_SHORT).show();
-            }
-
         });
+
+        final ProgressDialog progress = new ProgressDialog(this);
+        progress.setMessage(getResources().getString(R.string.listuser_load));
+        progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        progress.setIndeterminate(true);
+        progress.show();
+
+        volley.addRequestFinishedListener(new RequestQueue.RequestFinishedListener<Void>() {
+
+            @Override
+            public void onRequestFinished(Request<Void> request) {
+                progress.dismiss();
+            }
+        });
+
+        volley.add(contactAddRequest);
+    }
+
+    private void handleError() {
+        Toast.makeText(this, R.string.adduser_fail, Toast.LENGTH_SHORT).show();
     }
 
 }
