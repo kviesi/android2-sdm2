@@ -32,6 +32,7 @@ import br.edu.ifspsaocarlos.sdm.mensageiro.constant.Constants;
 import br.edu.ifspsaocarlos.sdm.mensageiro.constant.ConstantsWS;
 import br.edu.ifspsaocarlos.sdm.mensageiro.model.NotificationHistoric;
 import io.realm.Realm;
+import io.realm.RealmConfiguration;
 
 /**
  * Created by kaiov on 03/07/2016.
@@ -49,7 +50,14 @@ public class MessagesService extends Service implements Runnable {
     public void onCreate() {
         super.onCreate();
         volley = Volley.newRequestQueue(this);
-        realm = Realm.getInstance(this);
+
+        RealmConfiguration realmConfig = new RealmConfiguration.Builder(this)
+                .deleteRealmIfMigrationNeeded()
+                .build();
+
+        Realm.setDefaultConfiguration(realmConfig);
+
+        realm = Realm.getDefaultInstance();
 
         scheduledExecutorService.scheduleAtFixedRate(this, 5, 10, TimeUnit.SECONDS);
     }
@@ -77,6 +85,8 @@ public class MessagesService extends Service implements Runnable {
 
     public void run() {
 
+        Log.i("messages_notification", "ID do contato: " + ownerID);
+
         Collection<String> urls = new ArrayList<>();
 
         for (String contactID : contactIds) {
@@ -84,7 +94,8 @@ public class MessagesService extends Service implements Runnable {
                 continue;
             }
 
-            NotificationHistoric historic = realm.where(NotificationHistoric.class).equalTo("contactID", contactID)
+            NotificationHistoric historic = realm.where(NotificationHistoric.class)
+                                                 .equalTo("contactID", contactID)
                                                  .findFirst();
 
             if(historic != null && historic.getLastMessageID() != null) {
@@ -93,8 +104,6 @@ public class MessagesService extends Service implements Runnable {
                 urls.add(ConstantsWS.MESSAGE_WS_BASEURL + "/0/" + contactID + "/" + ownerID);
             }
         }
-
-        Log.i("messages_notification", "ID do contato: " + ownerID);
 
         for(String url : urls) {
 
@@ -142,6 +151,7 @@ public class MessagesService extends Service implements Runnable {
                                     NotificationHistoric notificationHistoric = realm.createObject(NotificationHistoric.class);
                                     notificationHistoric.setContactID(contactID);
                                     notificationHistoric.setLastMessageID(messageID);
+                                    realm.copyToRealm(notificationHistoric);
                                 }
                             });
 

@@ -76,8 +76,8 @@ public class AddContactActivity extends Activity {
 
                     }
 
-                    Intent contactsIntent = new Intent(ContactsActivity.class.getName());
-                    AddContactActivity.this.startActivity(contactsIntent);
+                    Intent contactsIntent = new Intent(AddContactActivity.this, ContactsActivity.class);
+                    startActivity(contactsIntent);
 
 
                 } catch (JSONException e) {

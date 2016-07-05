@@ -91,8 +91,8 @@ public class ContactsActivity extends ListActivity {
                 //show contacts in list view
                 ContactsActivity.this.setListAdapter(new ContactArrayAdapter(getBaseContext(), contactList));
                 if (!contactIds.isEmpty()) {
-                    Intent serviceIntent = new Intent();
-                    serviceIntent.setClassName("br.edu.ifspsaocarlos.sdm.mensageiro.service", MessagesService.class.getName());
+                    Intent serviceIntent = new Intent(ContactsActivity.this, MessagesService.class);
+                    //serviceIntent.setClassName("br.edu.ifspsaocarlos.sdm.mensageiro.service", MessagesService.class.getName());
                     serviceIntent.putExtra("contactIds", contactIds);
                     serviceIntent.putExtra("ownerID", ownerID);
                     startService(serviceIntent);
