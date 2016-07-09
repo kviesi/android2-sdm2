@@ -42,7 +42,6 @@ public class MessagesService extends Service implements Runnable {
     public static final String LOG_TAG = "messages_notification";
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
-    private Realm realm;
     private RequestQueue volley;
     private ArrayList<String> contactIds; //all contacts
     private Long ownerID; //loggedUser
@@ -57,7 +56,7 @@ public class MessagesService extends Service implements Runnable {
 
         Realm.setDefaultConfiguration(realmConfig);
 
-        realm = Realm.getDefaultInstance();
+
 
         scheduledExecutorService.scheduleAtFixedRate(this, 5, 10, TimeUnit.SECONDS);
     }
@@ -85,27 +84,29 @@ public class MessagesService extends Service implements Runnable {
 
     public void run() {
 
+        Realm realm = Realm.getDefaultInstance();
+
         Log.i("messages_notification", "ID do contato: " + ownerID);
 
         Collection<String> urls = new ArrayList<>();
 
         for (String contactID : contactIds) {
-            if(contactID == null) {
+            if (contactID == null) {
                 continue;
             }
 
             NotificationHistoric historic = realm.where(NotificationHistoric.class)
-                                                 .equalTo("contactID", contactID)
-                                                 .findFirst();
+                    .equalTo("contactID", Long.valueOf(contactID))
+                    .findFirst();
 
-            if(historic != null && historic.getLastMessageID() != null) {
-                urls.add(ConstantsWS.MESSAGE_WS_BASEURL + "/" + historic.getLastMessageID() + "/" + contactID + "/" + ownerID);
+            if (Long.valueOf(contactID) != ownerID && historic != null && historic.getLastMessageID() != null) {
+                urls.add(ConstantsWS.MESSAGE_WS_BASEURL + "/" + (historic.getLastMessageID() + 1) + "/" + contactID + "/" + ownerID);
             } else {
                 urls.add(ConstantsWS.MESSAGE_WS_BASEURL + "/0/" + contactID + "/" + ownerID);
             }
         }
 
-        for(String url : urls) {
+        for (String url : urls) {
 
             Log.i("messages_notification", "Enviando para fila volley [" + url + "]");
 
@@ -127,40 +128,46 @@ public class MessagesService extends Service implements Runnable {
                         }
 
                         final Long messageID = lastMessage.getLong("id");
-                        final Long contactID = lastMessage.getLong("destino_id");
+                        final Long contactID = lastMessage.getLong("origem_id");
+
+                        //realm instance
+                        Realm realm = Realm.getDefaultInstance();
 
                         NotificationHistoric historic = realm.where(NotificationHistoric.class)
-                                .equalTo("contactID", contactID)
-                                .findFirst();
+                                                             .equalTo("contactID", contactID)
+                                                             .findFirst();
 
                         Long lastMessageID = historic != null ? historic.getLastMessageID() : null;
 
                         Log.i(LOG_TAG, "Last message stored ID: " + lastMessageID + " to contact ID: " + contactID);
 
-                        if(historic.getLastMessageID() == null) {
+                        // se nao tem historio ainda.. sera a primeira notificacao
+                        if (historic == null || historic.getLastMessageID() == null) {
                             lastMessageID = messageID;
+                        } else {
+                            //ultima mensagem deve ser diferente da
+                            lastMessageID = messageID != lastMessageID ? messageID : -1;
                         }
 
-                        if (messageID == lastMessageID || lastMessageID  != messageID) {
+                        if (lastMessageID > 0 ) {
                             Log.i(LOG_TAG, "Notificando mensagem: " + messageID);
+                            showNotification(contactID);
 
                             //persist last message
-                            realm.executeTransaction(new Realm.Transaction() {
-
-                                public void execute(Realm realm) {
-                                    NotificationHistoric notificationHistoric = realm.createObject(NotificationHistoric.class);
-                                    notificationHistoric.setContactID(contactID);
-                                    notificationHistoric.setLastMessageID(messageID);
-                                    realm.copyToRealm(notificationHistoric);
-                                }
-                            });
-
-                            showNotification(contactID);
+                            realm.beginTransaction();
+                            if (historic == null) {
+                                historic = realm.createObject(NotificationHistoric.class);
+                                historic.setContactID(contactID);
+                                historic.setLastMessageID(lastMessageID);
+                            } else {
+                                historic.setLastMessageID(lastMessageID);
+                            }
+                            realm.commitTransaction();
 
                         }
 
                     } catch (JSONException e) {
-
+                        Log.e(LOG_TAG,"Fail to notify user", e);
                     }
                 }
 
