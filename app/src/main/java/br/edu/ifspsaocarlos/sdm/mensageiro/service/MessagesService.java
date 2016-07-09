@@ -95,15 +95,8 @@ public class MessagesService extends Service implements Runnable {
                 continue;
             }
 
-            NotificationHistoric historic = realm.where(NotificationHistoric.class)
-                    .equalTo("contactID", Long.valueOf(contactID))
-                    .findFirst();
+            urls.add(ConstantsWS.MESSAGE_WS_BASEURL + "/0/" + contactID + "/" + ownerID);
 
-            if (Long.valueOf(contactID) != ownerID && historic != null && historic.getLastMessageID() != null) {
-                urls.add(ConstantsWS.MESSAGE_WS_BASEURL + "/" + (historic.getLastMessageID() + 1) + "/" + contactID + "/" + ownerID);
-            } else {
-                urls.add(ConstantsWS.MESSAGE_WS_BASEURL + "/0/" + contactID + "/" + ownerID);
-            }
         }
 
         for (String url : urls) {
@@ -130,6 +123,8 @@ public class MessagesService extends Service implements Runnable {
                         final Long messageID = lastMessage.getLong("id");
                         final Long contactID = lastMessage.getLong("origem_id");
 
+                        Log.i(LOG_TAG, "Processando - Mensagem: " + messageID + " Contato: " + contactID);
+
                         //realm instance
                         Realm realm = Realm.getDefaultInstance();
 
@@ -139,14 +134,16 @@ public class MessagesService extends Service implements Runnable {
 
                         Long lastMessageID = historic != null ? historic.getLastMessageID() : null;
 
-                        Log.i(LOG_TAG, "Last message stored ID: " + lastMessageID + " to contact ID: " + contactID);
+                        Log.i(LOG_TAG, "Ultima mensagem armazenada no historico: " + lastMessageID + " para contato: " + contactID);
 
                         // se nao tem historio ainda.. sera a primeira notificacao
                         if (historic == null || historic.getLastMessageID() == null) {
+                            Log.i(LOG_TAG, "Processando primeira mensagem: " + messageID );
                             lastMessageID = messageID;
                         } else {
-                            //ultima mensagem deve ser diferente da
-                            lastMessageID = messageID != lastMessageID ? messageID : -1;
+                            //ultima mensagem deve ser diferente
+                            Log.i(LOG_TAG, "Processando ultima mensagem id: " + lastMessageID + " Mensagem id atual: " + messageID);
+                            lastMessageID = lastMessageID.longValue() != messageID.longValue() ? messageID : -1;
                         }
 
                         if (lastMessageID > 0 ) {
